@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 /** Modal generik (untuk konten non-form). Tutup dengan Esc atau klik latar. */
@@ -11,7 +12,7 @@ export function Modal({ title, onClose, children, wide = false }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  const ui = (
     <div className="no-print fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
       <div className="animate-fade absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <div className={`card animate-popin relative max-h-[90vh] w-full overflow-y-auto p-6 ${wide ? 'max-w-3xl' : 'max-w-lg'}`}>
@@ -23,4 +24,6 @@ export function Modal({ title, onClose, children, wide = false }) {
       </div>
     </div>
   );
+  // Dirender di luar pohon halaman agar posisi fixed selalu relatif ke layar (bukan ke elemen beranimasi).
+  return createPortal(ui, document.body);
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 /**
@@ -23,7 +24,7 @@ export function FormModal({ title, fields, onSubmit, onClose }) {
     try { await onSubmit(Object.fromEntries(new FormData(e.target))); } finally { setSaving(false); }
   };
 
-  return (
+  const ui = (
     <div className="no-print fixed inset-0 z-50 grid place-items-center p-4" role="dialog" aria-modal="true">
       <div className="animate-fade absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
       <form onSubmit={submit} className="card animate-popin relative max-h-[90vh] w-full max-w-lg space-y-3 overflow-y-auto p-6">
@@ -58,4 +59,6 @@ export function FormModal({ title, fields, onSubmit, onClose }) {
       </form>
     </div>
   );
+  // Dirender di luar pohon halaman agar posisi fixed selalu relatif ke layar (bukan ke elemen beranimasi).
+  return createPortal(ui, document.body);
 }

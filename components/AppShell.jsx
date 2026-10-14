@@ -28,7 +28,7 @@ export function AppShell({ children }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar menuButton={<button className="btn-ghost !p-2 lg:hidden" onClick={() => setOpen(true)} aria-label="Buka menu"><Menu className="h-4 w-4" /></button>} />
-        <main className="flex-1 p-4 sm:p-6"><div key={pathname} className="animate-fadeup">{children}</div></main>
+        <main className="flex-1 p-4 sm:p-6"><div key={pathname} className="animate-page">{children}</div></main>
       </div>
     </div>
   );

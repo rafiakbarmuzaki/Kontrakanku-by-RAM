@@ -41,6 +41,7 @@
 
 .animate-fade { animation: fade .25s ease-out both; }
 .animate-fadeup { animation: fadeup .5s cubic-bezier(.2, .7, .2, 1) both; }
+.animate-page { animation: fadeup .45s cubic-bezier(.2, .7, .2, 1) backwards; }
 .animate-popin { animation: popin .28s cubic-bezier(.2, .8, .2, 1) both; }
 .animate-slidein { animation: slidein .35s cubic-bezier(.2, .8, .2, 1) both; }
 .animate-slideleft { animation: slideleft .3s cubic-bezier(.2, .8, .2, 1) both; }
