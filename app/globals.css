@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply min-h-screen bg-gradient-to-br from-slate-50 via-white to-brand-50/70 bg-fixed text-slate-800 antialiased;
+  }
+}
+
+@layer components {
+  .card { @apply rounded-2xl border border-slate-200/80 bg-white shadow-card transition-shadow duration-300; }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition duration-200
+      focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 active:scale-[.97] disabled:opacity-50 disabled:active:scale-100;
+  }
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-brand-600 to-violet-600 text-white shadow-sm shadow-brand-500/30
+      hover:-translate-y-px hover:from-brand-700 hover:to-violet-700 hover:shadow-md hover:shadow-brand-500/40;
+  }
+  .btn-ghost { @apply btn border border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50; }
+  .btn-sm { @apply !px-3 !py-1 text-xs; }
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition duration-200
+      placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15;
+  }
+  .label { @apply mb-1 block text-xs font-medium text-slate-500; }
+}
+
+/* ---------- Animasi ---------- */
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes fadeup { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes popin { from { opacity: 0; transform: scale(.95) translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes slidein { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes slideleft { from { transform: translateX(-100%); } to { transform: none; } }
+@keyframes grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+@keyframes blob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(24px, -20px) scale(1.08); } }
+@keyframes shine { from { transform: translateX(-120%) skewX(-20deg); } to { transform: translateX(260%) skewX(-20deg); } }
+
+.animate-fade { animation: fade .25s ease-out both; }
+.animate-fadeup { animation: fadeup .5s cubic-bezier(.2, .7, .2, 1) both; }
+.animate-popin { animation: popin .28s cubic-bezier(.2, .8, .2, 1) both; }
+.animate-slidein { animation: slidein .35s cubic-bezier(.2, .8, .2, 1) both; }
+.animate-slideleft { animation: slideleft .3s cubic-bezier(.2, .8, .2, 1) both; }
+.animate-float { animation: float 4s ease-in-out infinite; }
+.animate-blob { animation: blob 12s ease-in-out infinite; }
+
+/* Anak-anak muncul bergantian (kartu statistik, panel dashboard). */
+.stagger > * { animation: fadeup .55s cubic-bezier(.2, .7, .2, 1) both; }
+.stagger > *:nth-child(2) { animation-delay: .08s; }
+.stagger > *:nth-child(3) { animation-delay: .16s; }
+.stagger > *:nth-child(4) { animation-delay: .24s; }
+.stagger > *:nth-child(5) { animation-delay: .32s; }
+.stagger > *:nth-child(6) { animation-delay: .4s; }
+
+/* Baris tabel muncul bergantian. */
+.table-anim tbody tr { animation: fadein .4s ease-out both; }
+.table-anim tbody tr:nth-child(2) { animation-delay: .03s; }
+.table-anim tbody tr:nth-child(3) { animation-delay: .06s; }
+.table-anim tbody tr:nth-child(4) { animation-delay: .09s; }
+.table-anim tbody tr:nth-child(5) { animation-delay: .12s; }
+.table-anim tbody tr:nth-child(6) { animation-delay: .15s; }
+.table-anim tbody tr:nth-child(7) { animation-delay: .18s; }
+.table-anim tbody tr:nth-child(8) { animation-delay: .21s; }
+.table-anim tbody tr:nth-child(9) { animation-delay: .24s; }
+.table-anim tbody tr:nth-child(10) { animation-delay: .27s; }
+
+/* Batang grafik tumbuh dari bawah. */
+.bar { transform-box: fill-box; transform-origin: bottom; animation: grow .8s cubic-bezier(.2, .8, .2, 1) both; transition: fill .2s; }
+
+/* Kilau lewat pada kartu saat disorot. */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: ''; position: absolute; inset: 0 auto 0 0; width: 40%; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / .55), transparent);
+  transform: translateX(-120%) skewX(-20deg);
+}
+.shine:hover::after { animation: shine .9s ease-out; }
+
+/* Hormati pengguna yang mematikan animasi di perangkatnya. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* "Export to PDF" memakai Save-as-PDF dari browser; sembunyikan elemen aplikasi dan animasi saat cetak. */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  main { padding: 0 !important; }
+  .card { box-shadow: none !important; border-color: #ddd !important; }
+  * { animation: none !important; }
+}
