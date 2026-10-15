@@ -1,7 +1,6 @@
 import { route, json, readBody, bad, checkId } from '@/lib/api';
 import { Tenant, Payment } from '@/lib/models';
 import { recomputeTenantLedger, ensureCurrentPeriods } from '@/lib/billing';
-import { saveProof, deleteProof } from '@/lib/storage';
 import { nextReceiptNo, newToken, signReceipt, describePayment, publicBase } from '@/lib/receipt';
 
 /**
@@ -33,21 +32,15 @@ export const POST = route(async ({ req, user }) => {
   const amount = Number(b.amount);
   if (!Number.isInteger(amount) || amount <= 0) throw bad('Jumlah harus lebih dari 0');
 
-  const proofUrl = await saveProof(b.proof);
-  try {
-    const date = new Date(b.paymentDate);
-    const receiptNo = await nextReceiptNo(date);
-    const payment = await Payment.create({
-      tenant: tenant._id, unit: tenant.unit?._id, amount, paymentDate: date, proofUrl,
-      receiptNo, token: newToken(), recordedBy: user.email,
-      signature: signReceipt({ receiptNo, tenantId: tenant._id, amount, paymentDate: date }),
-    });
-    await ensureCurrentPeriods();
-    await recomputeTenantLedger(tenant._id); // mengisi alokasi + sisa hutang pada pembayaran ini
-    const saved = await Payment.findById(payment._id);
-    return json({ ...saved.toJSON(), ...describePayment(saved, { tenant, base: publicBase(req) }) }, 201);
-  } catch (e) {
-    await deleteProof(proofUrl); // jangan tinggalkan file yatim
-    throw e;
-  }
+  const date = new Date(b.paymentDate);
+  const receiptNo = await nextReceiptNo(date);
+  const payment = await Payment.create({
+    tenant: tenant._id, unit: tenant.unit?._id, amount, paymentDate: date,
+    receiptNo, token: newToken(), recordedBy: user.email,
+    signature: signReceipt({ receiptNo, tenantId: tenant._id, amount, paymentDate: date }),
+  });
+  await ensureCurrentPeriods();
+  await recomputeTenantLedger(tenant._id); // mengisi alokasi + sisa hutang pada pembayaran ini
+  const saved = await Payment.findById(payment._id);
+  return json({ ...saved.toJSON(), ...describePayment(saved, { tenant, base: publicBase(req) }) }, 201);
 });

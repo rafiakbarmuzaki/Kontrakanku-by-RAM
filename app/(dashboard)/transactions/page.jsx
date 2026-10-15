@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Receipt, ExternalLink, Paperclip } from 'lucide-react';
+import { Plus, Receipt, ExternalLink } from 'lucide-react';
 import { api, useFetch } from '@/lib/client';
 import { formatDate, formatIDR, formatPeriod } from '@/lib/format';
 import { waLink, describeAllocations } from '@/lib/phone';
@@ -64,9 +64,6 @@ export default function TransactionsPage() {
             { header: 'Dialokasikan ke', cell: (r) => <span className="block max-w-xs whitespace-normal text-xs text-slate-600">{describeAllocations(r.allocations)}</span> },
             { header: 'Sisa Hutang', cell: (r) => <span className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'Lunas'}</span> },
             { header: 'Kwitansi', cell: (r) => r.receiptNo },
-            { header: 'Bukti', cell: (r) => r.proofUrl
-              ? <a href={r.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Paperclip className="h-3.5 w-3.5" />Lihat</a>
-              : <span className="text-slate-400">-</span> },
             { header: '', cell: (r) => (
               <div className="flex gap-2">
                 <SendReceiptButton link={r.waLink} size="sm" />

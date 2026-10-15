@@ -20,11 +20,8 @@ export function RecordPayment({ tenants, prefill = {}, onClose, onDone }) {
   const [result, setResult] = useState(null);
 
   const save = async (v) => {
-    const fd = new FormData();
-    ['tenant', 'paymentDate', 'amount'].forEach((k) => fd.append(k, v[k]));
-    if (v.proof?.size) fd.append('proof', v.proof);
     try {
-      setResult(await api('POST', '/api/payments', fd));
+      setResult(await api('POST', '/api/payments', { tenant: v.tenant, paymentDate: v.paymentDate, amount: v.amount }));
       onDone?.();
     } catch (e) {
       toast(e.message, 'error');
@@ -40,7 +37,6 @@ export function RecordPayment({ tenants, prefill = {}, onClose, onDone }) {
         { name: 'tenant', label: 'Penghuni', type: 'select', value: prefill.tenantId, options: tenants.map((t) => [t.id, `${t.name} (${t.unit?.number ?? '-'}) · ${t.phone}`]) },
         { name: 'paymentDate', label: 'Tanggal Bayar', type: 'date', value: toInputDate(new Date()) },
         { name: 'amount', label: 'Jumlah Dibayar (Rp) - boleh kurang atau lebih dari tagihan', type: 'number', value: prefill.amount, attrs: { min: 1 } },
-        { name: 'proof', label: 'Bukti Transfer (gambar / PDF, maks. 4 MB)', type: 'file', required: false },
       ]}
     />
   );

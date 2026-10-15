@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Paperclip } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { api, useFetch } from '@/lib/client';
 import { formatDate, formatIDR, formatPeriod } from '@/lib/format';
 import { describeAllocations } from '@/lib/phone';
@@ -26,7 +26,7 @@ export function PaymentsModal({ bill, onClose, onChanged }) {
         data.length === 0 ? <p className="py-6 text-center text-sm text-slate-500">Belum ada pembayaran yang dialokasikan ke bulan ini.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500"><tr>{['Tanggal', 'Jumlah', 'Dialokasikan ke', 'No. Kwitansi', 'Bukti', ''].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+              <thead className="text-xs uppercase text-slate-500"><tr>{['Tanggal', 'Jumlah', 'Dialokasikan ke', 'No. Kwitansi', ''].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {data.map((p) => (
                   <tr key={p.id}>
@@ -34,9 +34,6 @@ export function PaymentsModal({ bill, onClose, onChanged }) {
                     <td className="whitespace-nowrap px-3 py-2 font-medium">{formatIDR(p.amount)}</td>
                     <td className="px-3 py-2 text-xs text-slate-600">{describeAllocations(p.allocations)}</td>
                     <td className="whitespace-nowrap px-3 py-2">{p.receiptNo}</td>
-                    <td className="whitespace-nowrap px-3 py-2">
-                      {p.proofUrl ? <a href={p.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Paperclip className="h-3.5 w-3.5" />Lihat</a> : '-'}
-                    </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-2">
                         <SendReceiptButton link={p.waLink} size="sm" />
