@@ -3,34 +3,36 @@
 import { ExternalLink, Paperclip } from 'lucide-react';
 import { api, useFetch } from '@/lib/client';
 import { formatDate, formatIDR, formatPeriod } from '@/lib/format';
+import { describeAllocations } from '@/lib/phone';
 import { Modal } from './Modal';
 import { SendReceiptButton } from './SendReceiptButton';
 import { Pending } from './Loading';
 import { useUser } from './UserProvider';
 import { useAction } from './useAction';
 
-/** Riwayat pembayaran sebuah tagihan: kwitansi, bukti, dan tombol kirim ulang ke WhatsApp. */
+/** Pembayaran yang dialokasikan ke satu tagihan bulanan: kwitansi, bukti, dan tombol kirim ulang ke WhatsApp. */
 export function PaymentsModal({ bill, onClose, onChanged }) {
   const { isSuper } = useUser();
   const { data, loading, error, reload } = useFetch(`/api/payments?transaction=${bill.id}`);
   const act = useAction(async () => { await reload(); onChanged?.(); });
 
   const remove = (p) =>
-    confirm(`Hapus pembayaran ${formatIDR(p.amount)} (${p.receiptNo})? Kwitansinya tidak akan berlaku lagi.`) &&
+    confirm(`Hapus pembayaran ${formatIDR(p.amount)} (${p.receiptNo})? Kwitansinya tidak akan berlaku lagi dan alokasi penghuni ini dihitung ulang.`) &&
     act(() => api('DELETE', `/api/payments/${p.id}`), 'Pembayaran dihapus');
 
   return (
     <Modal title={`Pembayaran ${bill.tenant?.name ?? ''} · ${formatPeriod(bill.period)}`} onClose={onClose} wide>
       {Pending({ loading, error, data }) ?? (
-        data.length === 0 ? <p className="py-6 text-center text-sm text-slate-500">Belum ada pembayaran untuk tagihan ini.</p> : (
+        data.length === 0 ? <p className="py-6 text-center text-sm text-slate-500">Belum ada pembayaran yang dialokasikan ke bulan ini.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500"><tr>{['Tanggal', 'Jumlah', 'No. Kwitansi', 'Bukti', ''].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+              <thead className="text-xs uppercase text-slate-500"><tr>{['Tanggal', 'Jumlah', 'Dialokasikan ke', 'No. Kwitansi', 'Bukti', ''].map((h) => <th key={h} className="whitespace-nowrap px-3 py-2 font-medium">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {data.map((p) => (
                   <tr key={p.id}>
                     <td className="whitespace-nowrap px-3 py-2">{formatDate(p.paymentDate)}</td>
                     <td className="whitespace-nowrap px-3 py-2 font-medium">{formatIDR(p.amount)}</td>
+                    <td className="px-3 py-2 text-xs text-slate-600">{describeAllocations(p.allocations)}</td>
                     <td className="whitespace-nowrap px-3 py-2">{p.receiptNo}</td>
                     <td className="whitespace-nowrap px-3 py-2">
                       {p.proofUrl ? <a href={p.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Paperclip className="h-3.5 w-3.5" />Lihat</a> : '-'}

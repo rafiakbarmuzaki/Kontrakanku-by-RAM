@@ -1,6 +1,6 @@
 import { route, json, readBody, checkId, HttpError } from '@/lib/api';
 import { Tenant, Transaction, Payment } from '@/lib/models';
-import { syncUnits } from '@/lib/billing';
+import { syncUnits, recomputeTenantLedger } from '@/lib/billing';
 import { deleteProof } from '@/lib/storage';
 import { pickTenant, assertUnitFree } from '@/lib/validators';
 
@@ -10,6 +10,7 @@ export const PUT = route(async ({ req, params }) => {
   const tenant = await Tenant.findByIdAndUpdate(params.id, data, { new: true, runValidators: true }).populate('unit', 'number price');
   if (!tenant) throw new HttpError(404, 'Penghuni tidak ditemukan');
   await syncUnits();
+  await recomputeTenantLedger(tenant._id); // tanggal masuk / unit (harga) bisa berubah
   return json(tenant);
 });
 

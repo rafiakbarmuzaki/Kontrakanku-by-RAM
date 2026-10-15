@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation';
 import QRCode from 'qrcode';
 import { ShieldCheck, ShieldAlert, Printer } from 'lucide-react';
 import { useFetch } from '@/lib/client';
-import { formatDate, formatIDR, formatPeriod, terbilang } from '@/lib/format';
+import { formatDate, formatIDR, formatPeriod, periodKey, terbilang } from '@/lib/format';
+
+const nowPeriod = periodKey();
 
 /**
  * Halaman kwitansi PUBLIK (tanpa login): dibuka penghuni dari tautan WhatsApp dan oleh siapa pun yang memindai QR.
@@ -51,7 +53,7 @@ export default function ReceiptPage() {
         <dl className="space-y-3 text-sm">
           <Row label="Telah terima dari" value={r.tenantName} />
           <Row label="Unit" value={r.unitNumber} />
-          <Row label="Untuk pembayaran" value={`Sewa kontrakan periode ${formatPeriod(r.period)}`} />
+          <Row label="Untuk pembayaran" value="Sewa kontrakan" />
           <Row label="Terbilang" value={<i>{terbilang(r.amount)}</i>} />
         </dl>
 
@@ -61,9 +63,20 @@ export default function ReceiptPage() {
         </div>
 
         <dl className="space-y-1 text-sm text-slate-700">
-          <Row label="Tagihan periode ini" value={formatIDR(r.amountDue)} />
-          <Row label="Total dibayar" value={formatIDR(r.totalPaid)} />
-          <Row label="Sisa" value={<b className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'LUNAS'}</b>} />
+          {r.allocations.length > 0 && (
+            <div>
+              <p className="mb-1 text-slate-500">Dialokasikan untuk</p>
+              <ul className="space-y-0.5 rounded-lg bg-slate-50 px-3 py-2">
+                {r.allocations.map((a) => (
+                  <li key={a.period} className="flex justify-between gap-3">
+                    <span>{formatPeriod(a.period)}{a.period > nowPeriod && <i className="ml-1 text-xs text-slate-500">(dibayar di muka)</i>}</span>
+                    <span>{formatIDR(a.amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Row label="Sisa hutang" value={<b className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'TIDAK ADA (LUNAS)'}</b>} />
         </dl>
 
         <footer className="mt-8 flex flex-wrap items-end justify-between gap-6">

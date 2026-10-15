@@ -24,7 +24,7 @@ export default function DebtsPage() {
   return (
     <div className="space-y-6">
       <div className="stagger grid gap-4 sm:grid-cols-2">
-        <StatCard label="Total Hutang Semua Kontrakan" amount={totalDebt} format={formatIDR} hint="Jumlah tagihan yang belum dibayar" icon={AlertTriangle} tone="rose" />
+        <StatCard label="Total Hutang Semua Kontrakan" amount={totalDebt} format={formatIDR} hint="Kekurangan bulan-bulan sebelumnya ikut terhitung" icon={AlertTriangle} tone="rose" />
         <StatCard label="Penghuni Berhutang" value={`${debtors} dari ${rows.length}`} hint={debtors ? 'Urut dari hutang terbesar' : 'Semua lunas'} icon={Users} tone="amber" />
       </div>
 
@@ -38,9 +38,12 @@ export default function DebtsPage() {
           { header: 'Telepon', cell: (r) => <a href={waLink(r.phone) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{r.phone}</a> },
           { header: 'Bulan Menunggak', cell: (r) => r.unpaidMonths ? r.periods.map((p) => formatPeriod(p.period)).join(', ') : <span className="text-slate-400">-</span> },
           { header: 'Hutang', cell: (r) => <span className={r.debt > 0 ? 'font-semibold text-rose-600' : 'text-emerald-600'}>{r.debt > 0 ? formatIDR(r.debt) : 'Lunas'}</span> },
+          { header: 'Dibayar di Muka', cell: (r) => r.advance > 0
+            ? <span className="text-emerald-600" title={r.advancePeriods.map(formatPeriod).join(', ')}>{formatIDR(r.advance)}</span>
+            : <span className="text-slate-400">-</span> },
           { header: '', cell: (r) => r.debt > 0 && (
             <div className="flex gap-2">
-              <button className="btn-primary btn-sm" onClick={() => setPay({ tenantId: r.tenantId, period: r.periods[0].period, amount: r.periods[0].remaining })}><Wallet className="h-3.5 w-3.5" />Bayar</button>
+              <button className="btn-primary btn-sm" onClick={() => setPay({ tenantId: r.tenantId, amount: r.debt })}><Wallet className="h-3.5 w-3.5" />Bayar</button>
               {waLink(r.phone) && (
                 <a className="btn-ghost btn-sm" target="_blank" rel="noopener noreferrer"
                   href={waLink(r.phone, reminderMessage({ name: r.name, unit: r.unit, debt: r.debt, periods: r.periods.map((p) => p.period) }))}>

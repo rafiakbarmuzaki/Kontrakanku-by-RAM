@@ -3,15 +3,17 @@
 import { useState } from 'react';
 import { CheckCircle2, Copy, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/client';
-import { formatIDR, formatPeriod, periodKey, toInputDate } from '@/lib/format';
+import { formatIDR, toInputDate } from '@/lib/format';
+import { describeAllocations } from '@/lib/phone';
 import { FormModal } from './FormModal';
 import { Modal } from './Modal';
 import { SendReceiptButton } from './SendReceiptButton';
 import { useToast } from './Toast';
 
 /**
- * Alur catat pembayaran: form -> simpan -> layar "kwitansi siap" dengan tombol kirim WhatsApp.
- * prefill: { tenantId, period, amount } opsional (mis. dari tombol "Bayar" pada tagihan).
+ * Alur catat pemasukan: form -> simpan -> layar "kwitansi siap" dengan tombol kirim WhatsApp.
+ * Tidak ada pilihan periode: uang masuk otomatis melunasi hutang terlama lebih dulu, dan
+ * kelebihannya menjadi pembayaran di muka. prefill: { tenantId, amount } opsional.
  */
 export function RecordPayment({ tenants, prefill = {}, onClose, onDone }) {
   const toast = useToast();
@@ -19,7 +21,7 @@ export function RecordPayment({ tenants, prefill = {}, onClose, onDone }) {
 
   const save = async (v) => {
     const fd = new FormData();
-    ['tenant', 'period', 'paymentDate', 'amount'].forEach((k) => fd.append(k, v[k]));
+    ['tenant', 'paymentDate', 'amount'].forEach((k) => fd.append(k, v[k]));
     if (v.proof?.size) fd.append('proof', v.proof);
     try {
       setResult(await api('POST', '/api/payments', fd));
@@ -33,33 +35,35 @@ export function RecordPayment({ tenants, prefill = {}, onClose, onDone }) {
 
   return (
     <FormModal
-      title="Catat Pembayaran" onClose={onClose} onSubmit={save}
+      title="Catat Pemasukan" onClose={onClose} onSubmit={save}
       fields={[
         { name: 'tenant', label: 'Penghuni', type: 'select', value: prefill.tenantId, options: tenants.map((t) => [t.id, `${t.name} (${t.unit?.number ?? '-'}) · ${t.phone}`]) },
-        { name: 'period', label: 'Untuk Periode Sewa', type: 'month', value: prefill.period ?? periodKey() },
         { name: 'paymentDate', label: 'Tanggal Bayar', type: 'date', value: toInputDate(new Date()) },
-        { name: 'amount', label: 'Jumlah Dibayar (Rp)', type: 'number', value: prefill.amount, attrs: { min: 1 } },
+        { name: 'amount', label: 'Jumlah Dibayar (Rp) - boleh kurang atau lebih dari tagihan', type: 'number', value: prefill.amount, attrs: { min: 1 } },
         { name: 'proof', label: 'Bukti Transfer (gambar / PDF, maks. 4 MB)', type: 'file', required: false },
       ]}
     />
   );
 }
 
-/** Layar sukses: ringkasan, tombol kirim WhatsApp, lihat kwitansi, salin tautan. */
+/** Layar sukses: ke mana uang dialokasikan, sisa hutang, tombol kirim WhatsApp, lihat kwitansi, salin tautan. */
 export function ReceiptReady({ payment, onClose }) {
   const toast = useToast();
   const copy = async () => {
     try { await navigator.clipboard.writeText(payment.receiptUrl); toast('Tautan kwitansi disalin'); } catch { toast('Gagal menyalin tautan', 'error'); }
   };
   return (
-    <Modal title="Pembayaran Tercatat" onClose={onClose}>
+    <Modal title="Pemasukan Tercatat" onClose={onClose}>
       <div className="space-y-4">
         <div className="flex items-start gap-3 rounded-xl bg-emerald-50 p-4">
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
           <div className="text-sm">
-            <p className="font-medium">{formatIDR(payment.amount)} · {formatPeriod(payment.period)}</p>
+            <p className="font-medium">{formatIDR(payment.amount)}</p>
             <p className="text-slate-600">No. kwitansi {payment.receiptNo}</p>
-            <p className="text-slate-600">{payment.remaining > 0 ? `Sisa tagihan periode ini ${formatIDR(payment.remaining)}` : 'Tagihan periode ini lunas'}</p>
+            {payment.allocations?.length > 0 && <p className="mt-1 text-slate-600">Dialokasikan untuk: {describeAllocations(payment.allocations)}</p>}
+            <p className={`mt-1 font-medium ${payment.remaining > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>
+              {payment.remaining > 0 ? `Sisa hutang: ${formatIDR(payment.remaining)}` : 'Tidak ada hutang tersisa'}
+            </p>
           </div>
         </div>
         <p className="text-sm text-slate-500">Kwitansi bertanda tangan QR sudah dibuat. Kirim ke penghuni lewat WhatsApp (tinggal tekan kirim di aplikasi WhatsApp).</p>

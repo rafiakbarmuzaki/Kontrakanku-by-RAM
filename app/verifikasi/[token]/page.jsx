@@ -45,7 +45,7 @@ export default function VerifyPage() {
         <Row label="No. Kwitansi" value={r.receiptNo} />
         <Row label="Diterima dari" value={r.tenantName} />
         <Row label="Unit" value={r.unitNumber} />
-        <Row label="Periode" value={formatPeriod(r.period)} />
+        <Row label="Untuk periode" value={r.allocations.map((a) => formatPeriod(a.period)).join(', ') || '-'} />
         <Row label="Jumlah" value={<b>{formatIDR(r.amount)}</b>} />
         <Row label="Tanggal bayar" value={formatDate(r.paymentDate)} />
         <Row label="Kode tanda tangan" value={<span className="font-mono text-xs">{r.signatureCode}</span>} />

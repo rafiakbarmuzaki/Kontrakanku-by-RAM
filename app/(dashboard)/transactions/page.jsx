@@ -1,77 +1,103 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, FilePlus2, Wallet, Receipt } from 'lucide-react';
+import { Plus, Receipt, ExternalLink, Paperclip } from 'lucide-react';
 import { api, useFetch } from '@/lib/client';
-import { formatIDR, formatPeriod, periodKey } from '@/lib/format';
-import { waLink } from '@/lib/phone';
+import { formatDate, formatIDR, formatPeriod } from '@/lib/format';
+import { waLink, describeAllocations } from '@/lib/phone';
 import { DataTable } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SendReceiptButton } from '@/components/SendReceiptButton';
 import { Pending } from '@/components/Loading';
 import { RecordPayment } from '@/components/RecordPayment';
 import { PaymentsModal } from '@/components/PaymentsModal';
 import { useUser } from '@/components/UserProvider';
 import { useAction } from '@/components/useAction';
-import { useToast } from '@/components/Toast';
 
-/** Tagihan per penghuni per bulan. Pembayaran (dan kwitansinya) dicatat per kejadian uang masuk. */
+/**
+ * Dua tampilan:
+ *  - Pemasukan: setiap uang masuk (kapan saja, berapa saja) beserta kwitansinya.
+ *  - Tagihan Bulanan: tagihan per penghuni per bulan yang terisi otomatis (hutang terlama dilunasi dulu).
+ */
 export default function TransactionsPage() {
+  const [tab, setTab] = useState('income');
+  const payments = useFetch('/api/payments');
   const bills = useFetch('/api/transactions');
   const tenants = useFetch('/api/tenants');
   const { isSuper } = useUser();
-  const toast = useToast();
-  const act = useAction(bills.reload);
-  const [pay, setPay] = useState(null); // {} atau prefill
-  const [history, setHistory] = useState(null); // tagihan yang riwayatnya dibuka
+  const reloadAll = () => Promise.all([payments.reload(), bills.reload()]);
+  const act = useAction(reloadAll);
+  const [pay, setPay] = useState(null);
+  const [history, setHistory] = useState(null);
 
-  const wait = Pending({ loading: bills.loading || tenants.loading, error: bills.error || tenants.error, data: bills.data && tenants.data });
+  const wait = Pending({ loading: payments.loading || bills.loading || tenants.loading, error: payments.error || bills.error || tenants.error, data: payments.data && bills.data && tenants.data });
   if (wait) return wait;
 
-  const remove = (r) =>
-    confirm(`Hapus tagihan ${r.tenant?.name} ${formatPeriod(r.period)} beserta semua pembayaran dan kwitansinya?`) &&
-    act(() => api('DELETE', `/api/transactions/${r.id}`), 'Tagihan dihapus');
-  const generate = async () => {
-    const period = periodKey();
-    if (!confirm(`Buat tagihan ${formatPeriod(period)} untuk semua penghuni yang belum punya tagihan?`)) return;
-    try {
-      const { created } = await api('POST', '/api/transactions/generate', { period });
-      toast(created ? `${created} tagihan dibuat` : 'Semua penghuni sudah punya tagihan bulan ini');
-      bills.reload();
-    } catch (e) { toast(e.message, 'error'); }
-  };
+  const removePayment = (p) =>
+    confirm(`Hapus pembayaran ${formatIDR(p.amount)} (${p.receiptNo})? Kwitansinya tidak akan berlaku lagi dan alokasi penghuni ini dihitung ulang.`) &&
+    act(() => api('DELETE', `/api/payments/${p.id}`), 'Pembayaran dihapus');
+
+  const recordBtn = (
+    <button className="btn-primary" onClick={() => (tenants.data.length ? setPay({}) : alert('Tambahkan penghuni dulu.'))}><Plus className="h-4 w-4" />Catat Pemasukan</button>
+  );
 
   return (
-    <>
-      <DataTable
-        rows={bills.data}
-        searchText={(r) => `${r.tenant?.name ?? ''} ${r.tenant?.phone ?? ''} ${r.unit?.number ?? ''} ${r.period} ${r.status}`}
-        toolbar={<>
-          <button className="btn-ghost" onClick={generate}><FilePlus2 className="h-4 w-4" />Buat Tagihan Bulan Ini</button>
-          <button className="btn-primary" onClick={() => (tenants.data.length ? setPay({}) : alert('Tambahkan penghuni dulu.'))}><Plus className="h-4 w-4" />Catat Pembayaran</button>
-        </>}
-        columns={[
-          { header: 'Periode', cell: (r) => formatPeriod(r.period) },
-          { header: 'Penghuni', cell: (r) => <b>{r.tenant?.name ?? '-'}</b> },
-          { header: 'Telepon', cell: (r) => r.tenant?.phone
-            ? <a href={waLink(r.tenant.phone) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{r.tenant.phone}</a> : '-' },
-          { header: 'Unit', cell: (r) => r.unit?.number ?? '-' },
-          { header: 'Tagihan', cell: (r) => formatIDR(r.amountDue) },
-          { header: 'Dibayar', cell: (r) => formatIDR(r.amount) },
-          { header: 'Sisa', cell: (r) => <span className={r.amountDue - r.amount > 0 ? 'font-medium text-rose-600' : 'text-slate-400'}>{formatIDR(r.amountDue - r.amount)}</span> },
-          { header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
-          { header: '', cell: (r) => (
-            <div className="flex gap-2">
-              {r.amount < r.amountDue && (
-                <button className="btn-primary btn-sm" onClick={() => setPay({ tenantId: r.tenant?.id, period: r.period, amount: r.amountDue - r.amount })}><Wallet className="h-3.5 w-3.5" />Bayar</button>
-              )}
-              <button className="btn-ghost btn-sm" onClick={() => setHistory(r)}><Receipt className="h-3.5 w-3.5" />Kwitansi</button>
-              {isSuper && <button className="btn-ghost btn-sm !text-rose-600" onClick={() => remove(r)}>Hapus</button>}
-            </div>
-          ) },
-        ]}
-      />
-      {pay && <RecordPayment tenants={tenants.data} prefill={pay} onClose={() => setPay(null)} onDone={bills.reload} />}
-      {history && <PaymentsModal bill={history} onClose={() => setHistory(null)} onChanged={bills.reload} />}
-    </>
+    <div className="space-y-4">
+      <div className="no-print inline-flex rounded-xl border border-slate-200 bg-white p-1 text-sm">
+        {[['income', 'Pemasukan'], ['bills', 'Tagihan Bulanan']].map(([k, l]) => (
+          <button key={k} onClick={() => setTab(k)} className={`rounded-lg px-4 py-1.5 font-medium transition ${tab === k ? 'bg-brand-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}>{l}</button>
+        ))}
+      </div>
+
+      {tab === 'income' ? (
+        <DataTable
+          key="income" rows={payments.data}
+          searchText={(r) => `${r.tenant?.name ?? ''} ${r.tenant?.phone ?? ''} ${r.unit?.number ?? ''} ${r.receiptNo}`}
+          toolbar={recordBtn}
+          empty="Belum ada pemasukan. Klik Catat Pemasukan setiap ada pembayaran masuk."
+          columns={[
+            { header: 'Tgl Bayar', cell: (r) => formatDate(r.paymentDate) },
+            { header: 'Penghuni', cell: (r) => <b>{r.tenant?.name ?? '-'}</b> },
+            { header: 'Telepon', cell: (r) => <a href={waLink(r.tenant?.phone) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{r.tenant?.phone}</a> },
+            { header: 'Unit', cell: (r) => r.unit?.number ?? '-' },
+            { header: 'Jumlah', cell: (r) => <span className="font-medium">{formatIDR(r.amount)}</span> },
+            { header: 'Dialokasikan ke', cell: (r) => <span className="block max-w-xs whitespace-normal text-xs text-slate-600">{describeAllocations(r.allocations)}</span> },
+            { header: 'Sisa Hutang', cell: (r) => <span className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'Lunas'}</span> },
+            { header: 'Kwitansi', cell: (r) => r.receiptNo },
+            { header: 'Bukti', cell: (r) => r.proofUrl
+              ? <a href={r.proofUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline"><Paperclip className="h-3.5 w-3.5" />Lihat</a>
+              : <span className="text-slate-400">-</span> },
+            { header: '', cell: (r) => (
+              <div className="flex gap-2">
+                <SendReceiptButton link={r.waLink} size="sm" />
+                <a href={r.receiptUrl} target="_blank" rel="noopener noreferrer" className="btn-ghost btn-sm"><ExternalLink className="h-3.5 w-3.5" />Kwitansi</a>
+                {isSuper && <button className="btn-ghost btn-sm !text-rose-600" onClick={() => removePayment(r)}>Hapus</button>}
+              </div>
+            ) },
+          ]}
+        />
+      ) : (
+        <DataTable
+          key="bills" rows={bills.data}
+          searchText={(r) => `${r.tenant?.name ?? ''} ${r.unit?.number ?? ''} ${r.period} ${r.status}`}
+          toolbar={recordBtn}
+          columns={[
+            { header: 'Periode', cell: (r) => formatPeriod(r.period) },
+            { header: 'Penghuni', cell: (r) => <b>{r.tenant?.name ?? '-'}</b> },
+            { header: 'Unit', cell: (r) => r.unit?.number ?? '-' },
+            { header: 'Tagihan', cell: (r) => formatIDR(r.amountDue) },
+            { header: 'Terbayar', cell: (r) => formatIDR(r.amount) },
+            { header: 'Kurang', cell: (r) => <span className={r.amountDue - r.amount > 0 ? 'font-medium text-rose-600' : 'text-slate-400'}>{formatIDR(r.amountDue - r.amount)}</span> },
+            { header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
+            { header: '', cell: (r) => (
+              <button className="btn-ghost btn-sm" onClick={() => setHistory(r)}><Receipt className="h-3.5 w-3.5" />Pembayaran</button>
+            ) },
+          ]}
+        />
+      )}
+
+      {pay && <RecordPayment tenants={tenants.data} prefill={pay} onClose={() => setPay(null)} onDone={reloadAll} />}
+      {history && <PaymentsModal bill={history} onClose={() => setHistory(null)} onChanged={reloadAll} />}
+    </div>
   );
 }

@@ -7,11 +7,10 @@ import { signReceipt, signatureCode, issuer, publicBase } from '@/lib/receipt';
  * Hanya mengembalikan data yang memang tercetak di kwitansi (tanpa telepon/KTP).
  */
 export const GET = route(async ({ req, params }) => {
-  const p = await Payment.findOne({ token: params.token })
-    .populate('tenant', 'name').populate('unit', 'number').populate('transaction', 'amountDue amount');
+  const p = await Payment.findOne({ token: params.token }).populate('tenant', 'name').populate('unit', 'number');
   if (!p || !p.tenant) throw new HttpError(404, 'Kwitansi tidak ditemukan');
 
-  const expected = signReceipt({ receiptNo: p.receiptNo, tenantId: p.tenant._id, period: p.period, amount: p.amount, paymentDate: p.paymentDate });
+  const expected = signReceipt({ receiptNo: p.receiptNo, tenantId: p.tenant._id, amount: p.amount, paymentDate: p.paymentDate, period: p.period });
   return json({
     receiptNo: p.receiptNo,
     issuedAt: p.createdAt,
@@ -19,11 +18,9 @@ export const GET = route(async ({ req, params }) => {
     paymentDate: p.paymentDate,
     tenantName: p.tenant.name,
     unitNumber: p.unit?.number ?? '-',
-    period: p.period,
     amount: p.amount,
-    amountDue: p.transaction.amountDue,
-    totalPaid: p.transaction.amount,
-    remaining: Math.max(0, p.transaction.amountDue - p.transaction.amount),
+    allocations: (p.allocations ?? []).map((a) => ({ period: a.period, amount: a.amount })),
+    remaining: p.remainingAfter ?? 0, // sisa hutang total penghuni tepat setelah pembayaran ini
     issuer: issuer(),
     signatureCode: signatureCode(p.signature),
     valid: expected === p.signature, // false jika data kwitansi diubah setelah diterbitkan

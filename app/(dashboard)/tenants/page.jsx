@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import { api, useFetch } from '@/lib/client';
-import { formatDate, formatIDR, toInputDate } from '@/lib/format';
+import { formatDate, formatIDR, periodKey, toInputDate } from '@/lib/format';
 import { DataTable } from '@/components/DataTable';
 import { FormModal } from '@/components/FormModal';
 import { Pending } from '@/components/Loading';
@@ -64,6 +64,7 @@ export default function TenantsPage() {
             { name: 'phone', label: 'No. Telepon', type: 'tel', value: t?.phone },
             { name: 'emergencyContact', label: 'Kontak Darurat (nama - nomor)', value: t?.emergencyContact },
             { name: 'entryDate', label: 'Tanggal Masuk', type: 'date', value: toInputDate(t?.entryDate) || toInputDate(new Date()) },
+            { name: 'billingStart', label: 'Mulai ditagih dari bulan (hutang dihitung sejak bulan ini)', type: 'month', value: t?.billingStart || periodKey() },
             { name: 'unit', label: 'Unit', type: 'select', value: t?.unit?.id, options: choices.map((u) => [u.id, `${u.number} - ${formatIDR(u.price)}`]) },
           ]}
         />

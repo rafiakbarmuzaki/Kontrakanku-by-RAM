@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { FileText, Sheet, Receipt, Wallet, AlertTriangle } from 'lucide-react';
 import { useFetch } from '@/lib/client';
 import { formatDate, formatIDR, formatPeriod, periodKey } from '@/lib/format';
+import { describeAllocations } from '@/lib/phone';
 import { StatCard } from '@/components/StatCard';
 import { DataTable } from '@/components/DataTable';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -42,9 +43,9 @@ export default function ReportsPage() {
       {Pending({ loading, error, data }) ?? (
         <>
           <div className="stagger grid gap-4 sm:grid-cols-3">
-            <StatCard label="Total Tagihan" amount={data.summary.billed} format={formatIDR} hint={`${data.rows.length} transaksi`} icon={Receipt} />
-            <StatCard label="Total Diterima" amount={data.summary.collected} format={formatIDR} hint={data.summary.billed ? `${Math.round((data.summary.collected / data.summary.billed) * 100)}% terkumpul` : ''} icon={Wallet} tone="emerald" />
-            <StatCard label="Belum Terbayar" amount={data.summary.billed - data.summary.collected} format={formatIDR} hint={`${data.summary.unpaid} tagihan`} icon={AlertTriangle} tone="rose" />
+            <StatCard label="Total Tagihan" amount={data.summary.billed} format={formatIDR} hint={`${data.rows.length} tagihan`} icon={Receipt} />
+            <StatCard label="Pemasukan Diterima" amount={data.summary.collected} format={formatIDR} hint={`${data.payments.length} pembayaran (menurut tanggal bayar)`} icon={Wallet} tone="emerald" />
+            <StatCard label="Kekurangan Tagihan" amount={data.summary.shortfall} format={formatIDR} hint={`${data.summary.unpaid} tagihan belum lunas`} icon={AlertTriangle} tone="rose" />
           </div>
 
           {mode === 'annual' && data.byMonth.length > 0 && (
@@ -56,13 +57,24 @@ export default function ReportsPage() {
             ]} />
           )}
 
-          <DataTable paginate={false} rows={data.rows} empty="Tidak ada transaksi pada periode ini." columns={[
+          <h3 className="pt-2 font-semibold">Pemasukan</h3>
+          <DataTable paginate={false} rows={data.payments} empty="Tidak ada pemasukan pada periode ini." columns={[
+            { header: 'Tgl Bayar', cell: (r) => formatDate(r.paymentDate) },
+            { header: 'Penghuni', cell: (r) => r.tenant?.name ?? '-' },
+            { header: 'Unit', cell: (r) => r.unit?.number ?? '-' },
+            { header: 'No. Kwitansi', cell: (r) => r.receiptNo },
+            { header: 'Jumlah', cell: (r) => formatIDR(r.amount) },
+            { header: 'Dialokasikan ke', cell: (r) => <span className="block max-w-xs whitespace-normal text-xs">{describeAllocations(r.allocations)}</span> },
+          ]} />
+
+          <h3 className="pt-2 font-semibold">Tagihan</h3>
+          <DataTable paginate={false} rows={data.rows} empty="Tidak ada tagihan pada periode ini." columns={[
             { header: 'Periode', cell: (r) => formatPeriod(r.period) },
             { header: 'Penghuni', cell: (r) => r.tenant?.name ?? '-' },
             { header: 'Unit', cell: (r) => r.unit?.number ?? '-' },
-            { header: 'Tgl Bayar', cell: (r) => formatDate(r.paymentDate) },
             { header: 'Tagihan', cell: (r) => formatIDR(r.amountDue) },
-            { header: 'Dibayar', cell: (r) => formatIDR(r.amount) },
+            { header: 'Terbayar', cell: (r) => formatIDR(r.amount) },
+            { header: 'Kurang', cell: (r) => formatIDR(r.amountDue - r.amount) },
             { header: 'Status', cell: (r) => <StatusBadge status={r.status} /> },
           ]} />
         </>

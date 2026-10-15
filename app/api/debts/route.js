@@ -1,25 +1,39 @@
 import { route, json } from '@/lib/api';
 import { Tenant, Transaction } from '@/lib/models';
+import { currentPeriod, ensureCurrentPeriods } from '@/lib/billing';
 
-/** Hutang per penghuni/kontrakan = jumlah (tagihan - dibayar) dari semua tagihan yang belum lunas. */
+/**
+ * Hutang per penghuni/kontrakan = jumlah kekurangan tagihan dari bulan masuk sampai bulan berjalan.
+ * `advance` = uang yang sudah dibayar di muka untuk bulan-bulan setelah bulan berjalan.
+ */
 export const GET = route(async () => {
-  const [tenants, unpaid] = await Promise.all([
+  await ensureCurrentPeriods();
+  const now = currentPeriod();
+  const [tenants, unpaid, prepaid] = await Promise.all([
     Tenant.find().populate('unit', 'number'),
-    Transaction.find({ $expr: { $lt: ['$amount', '$amountDue'] } }).sort({ period: 1 }),
+    Transaction.find({ period: { $lte: now }, $expr: { $lt: ['$amount', '$amountDue'] } }).sort({ period: 1 }),
+    Transaction.find({ period: { $gt: now }, amount: { $gt: 0 } }).sort({ period: 1 }),
   ]);
 
-  const byTenant = new Map();
-  for (const t of unpaid) {
-    const key = String(t.tenant);
-    if (!byTenant.has(key)) byTenant.set(key, []);
-    byTenant.get(key).push({ transactionId: String(t._id), period: t.period, due: t.amountDue, paid: t.amount, remaining: t.amountDue - t.amount });
-  }
+  const group = (list) => {
+    const m = new Map();
+    for (const t of list) {
+      const k = String(t.tenant);
+      if (!m.has(k)) m.set(k, []);
+      m.get(k).push(t);
+    }
+    return m;
+  };
+  const owed = group(unpaid);
+  const ahead = group(prepaid);
 
   const rows = tenants.map((t) => {
-    const periods = byTenant.get(String(t._id)) ?? [];
+    const periods = (owed.get(String(t._id)) ?? []).map((x) => ({ period: x.period, due: x.amountDue, paid: x.amount, remaining: x.amountDue - x.amount }));
+    const advance = ahead.get(String(t._id)) ?? [];
     return {
       tenantId: String(t._id), name: t.name, phone: t.phone, unit: t.unit?.number ?? '-',
       debt: periods.reduce((s, p) => s + p.remaining, 0), unpaidMonths: periods.length, periods,
+      advance: advance.reduce((s, x) => s + x.amount, 0), advancePeriods: advance.map((x) => x.period),
     };
   }).sort((a, b) => b.debt - a.debt || a.name.localeCompare(b.name));
 
