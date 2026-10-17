@@ -76,7 +76,7 @@ export default function ReceiptPage() {
               </ul>
             </div>
           )}
-          <Row label="Sisa hutang" value={<b className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'TIDAK ADA (LUNAS)'}</b>} />
+          <Row label="Sisa kekurangan" value={<b className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'TIDAK ADA (LUNAS)'}</b>} />
         </dl>
 
         <footer className="mt-8 flex flex-wrap items-end justify-between gap-6">
