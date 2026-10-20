@@ -31,11 +31,14 @@ export const GET = route(async () => {
     const periods = (owed.get(String(t._id)) ?? []).map((x) => ({ period: x.period, due: x.amountDue, paid: x.amount, remaining: x.amountDue - x.amount }));
     const advance = ahead.get(String(t._id)) ?? [];
     return {
-      tenantId: String(t._id), name: t.name, phone: t.phone, unit: t.unit?.number ?? '-',
+      tenantId: String(t._id), name: t.name, phone: t.phone, unit: t.unit?.number ?? '-', movedOut: Boolean(t.moveOutDate && t.moveOutDate <= new Date()),
       debt: periods.reduce((s, p) => s + p.remaining, 0), unpaidMonths: periods.length, periods,
       advance: advance.reduce((s, x) => s + x.amount, 0), advancePeriods: advance.map((x) => x.period),
     };
-  }).sort((a, b) => b.debt - a.debt || a.name.localeCompare(b.name));
+  })
+    // Penghuni yang sudah keluar hanya ditampilkan selama masih punya hutang / uang di muka.
+    .filter((r) => !r.movedOut || r.debt > 0 || r.advance > 0)
+    .sort((a, b) => b.debt - a.debt || a.name.localeCompare(b.name));
 
   return json({ rows, totalDebt: rows.reduce((s, r) => s + r.debt, 0), debtors: rows.filter((r) => r.debt > 0).length });
 });

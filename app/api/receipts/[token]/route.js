@@ -20,6 +20,7 @@ export const GET = route(async ({ req, params }) => {
     unitNumber: p.unit?.number ?? '-',
     amount: p.amount,
     allocations: (p.allocations ?? []).map((a) => ({ period: a.period, amount: a.amount })),
+    credit: p.credit ?? 0, // kelebihan uang yang tidak teralokasi (mis. penghuni sudah keluar)
     remaining: p.remainingAfter ?? 0, // sisa hutang total penghuni tepat setelah pembayaran ini
     issuer: issuer(),
     signatureCode: signatureCode(p.signature),

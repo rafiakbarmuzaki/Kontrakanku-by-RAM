@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { api, useFetch } from '@/lib/client';
 import { formatDate, formatIDR, periodKey, toInputDate } from '@/lib/format';
 import { DataTable } from '@/components/DataTable';
+import { StatusBadge } from '@/components/StatusBadge';
 import { FormModal } from '@/components/FormModal';
 import { Pending } from '@/components/Loading';
 import { useUser } from '@/components/UserProvider';
@@ -47,6 +48,9 @@ export default function TenantsPage() {
           { header: 'Kontak Darurat', cell: (r) => r.emergencyContact },
           { header: 'Tgl Masuk', cell: (r) => formatDate(r.entryDate) },
           { header: 'Unit', cell: (r) => r.unit?.number ?? '-' },
+          { header: 'Status', cell: (r) => (r.moveOutDate && new Date(r.moveOutDate) <= new Date()
+            ? <StatusBadge status="Vacant" label={`Keluar ${formatDate(r.moveOutDate)}`} />
+            : <StatusBadge status="Occupied" label="Tinggal" />) },
           { header: '', cell: (r) => (
             <div className="flex gap-2">
               <button className="btn-ghost btn-sm" onClick={() => setForm({ tenant: r })}>Edit</button>
@@ -65,6 +69,7 @@ export default function TenantsPage() {
             { name: 'emergencyContact', label: 'Kontak Darurat (nama - nomor)', value: t?.emergencyContact },
             { name: 'entryDate', label: 'Tanggal Masuk', type: 'date', value: toInputDate(t?.entryDate) || toInputDate(new Date()) },
             { name: 'billingStart', label: 'Mulai ditagih dari bulan (hutang dihitung sejak bulan ini)', type: 'month', value: t?.billingStart || periodKey() },
+            { name: 'moveOutDate', label: 'Tanggal keluar (kosongkan jika masih tinggal)', type: 'date', value: toInputDate(t?.moveOutDate), required: false },
             { name: 'unit', label: 'Unit', type: 'select', value: t?.unit?.id, options: choices.map((u) => [u.id, `${u.number} - ${formatIDR(u.price)}`]) },
           ]}
         />

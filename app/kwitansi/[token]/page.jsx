@@ -76,6 +76,7 @@ export default function ReceiptPage() {
               </ul>
             </div>
           )}
+          {r.credit > 0 && <Row label="Kelebihan bayar" value={formatIDR(r.credit)} />}
           <Row label="Sisa kekurangan" value={<b className={r.remaining > 0 ? 'text-rose-600' : 'text-emerald-600'}>{r.remaining > 0 ? formatIDR(r.remaining) : 'TIDAK ADA (LUNAS)'}</b>} />
         </dl>
 

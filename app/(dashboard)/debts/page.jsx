@@ -34,7 +34,7 @@ export default function DebtsPage() {
         empty="Belum ada penghuni."
         columns={[
           { header: 'Unit', cell: (r) => <b>{r.unit}</b> },
-          { header: 'Penghuni', cell: (r) => r.name },
+          { header: 'Penghuni', cell: (r) => <>{r.name}{r.movedOut && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">sudah keluar</span>}</> },
           { header: 'Telepon', cell: (r) => <a href={waLink(r.phone) ?? undefined} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{r.phone}</a> },
           { header: 'Bulan Menunggak', cell: (r) => r.unpaidMonths ? r.periods.map((p) => formatPeriod(p.period)).join(', ') : <span className="text-slate-400">-</span> },
           { header: 'Hutang', cell: (r) => <span className={r.debt > 0 ? 'font-semibold text-rose-600' : 'text-emerald-600'}>{r.debt > 0 ? formatIDR(r.debt) : 'Lunas'}</span> },
